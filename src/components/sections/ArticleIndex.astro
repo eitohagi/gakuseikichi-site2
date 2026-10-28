@@ -1,0 +1,92 @@
+---
+// 記事の目次（一覧）。マウスを乗せると表紙がカーソルについてくる
+import type { Article, Member } from "../../lib/content";
+import { fmtDate } from "../../lib/format";
+import { paletteOf } from "../../lib/palette";
+import { cmsImg } from "../../lib/format";
+interface Props { articles: Article[]; members: Record<string, Member>; filters?: boolean; showAuthor?: boolean }
+const { articles, members, filters = false, showAuthor = true } = Astro.props;
+const tags = [...new Set(articles.flatMap((a) => a.tags))];
+const color = (a: Article) => (a.authorId ? members[a.authorId]?.color : undefined) ?? "藍";
+---
+{filters && tags.length > 0 && (
+  <div class="filters bar" role="group" aria-label="タグで絞り込む" data-article-filters>
+    <button type="button" data-tag="" aria-pressed="true">すべて</button>
+    {tags.map((t) => <button type="button" data-tag={t} aria-pressed="false">{t}</button>)}
+  </div>
+)}
+<ul class="idx" data-article-index>
+  {articles.map((a, i) => {
+    const author = a.authorId ? members[a.authorId] : undefined;
+    return (
+      <li data-tags={a.tags.join("|")}>
+        <a
+          class="row"
+          href={`/articles/${a.id}/`}
+          data-pal={JSON.stringify(paletteOf(color(a)))}
+          data-seed={i + 3}
+          data-cover={a.cover ? cmsImg(a.cover.url, 600, { h: 400, fit: "crop" }) : undefined}
+        >
+          <time class="d" datetime={a.publishedAt}>{fmtDate(a.publishedAt)}</time>
+          <span class="t"><span class="h">{a.title}</span>{a.excerpt && <span class="ex">{a.excerpt}</span>}</span>
+          <span class="by">{showAuthor && author ? author.name : ""}<small>{a.tags.join("、")}</small></span>
+        </a>
+      </li>
+    );
+  })}
+</ul>
+{articles.length === 0 && <p class="empty">まだ記事がありません。メンバーが書いた記事は、公開されるとここに並びます。</p>}
+<div class="peek" aria-hidden="true"><canvas></canvas><img alt="" /></div>
+
+<style>
+  .bar { margin-bottom: 22px; }
+  .idx { list-style: none; margin: 0; padding: 0; border-bottom: 1px solid var(--ai); }
+  .row { display: grid; grid-template-columns: 8em minmax(0, 1fr) 12em; gap: 24px; align-items: baseline; padding: 26px 0; border-top: 1px solid var(--ai); text-decoration: none; }
+  .d { font-family: var(--f-display); font-size: 14px; font-variation-settings: "wdth" 80; color: var(--ai-2); font-variant-numeric: tabular-nums; }
+  .h { display: block; font-size: clamp(21px, 2.4vw, 32px); line-height: 1.45; font-weight: 700; transition: transform 0.35s var(--ease); }
+  .ex { display: block; font-size: 14px; color: var(--ai-2); margin-top: 8px; max-width: 40em; }
+  .by { font-size: 14px; text-align: right; }
+  .by small { display: block; color: var(--ai-2); font-size: 12.5px; }
+  .row:hover .h, .row:focus-visible .h { transform: translateX(12px); }
+  @media (max-width: 760px) { .row { grid-template-columns: 1fr; gap: 6px; } .by { text-align: left; } }
+  .empty { padding: 28px 0; color: var(--ai-2); }
+  .peek { position: fixed; z-index: 30; width: 300px; aspect-ratio: 3 / 2; pointer-events: none; opacity: 0; left: 0; top: 0; transform: translate(-50%, -50%) scale(0.9) rotate(-3deg); transition: opacity 0.25s, transform 0.35s var(--ease); background: var(--paper); }
+  .peek:global(.on) { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(-3deg); }
+  .peek canvas, .peek img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+</style>
+
+<script>
+  import { drawPattern } from "../../scripts/art";
+  // タグで絞り込む
+  document.querySelectorAll<HTMLElement>("[data-article-filters]").forEach((group) => {
+    const list = group.nextElementSibling as HTMLElement;
+    group.addEventListener("click", (e) => {
+      const b = (e.target as Element).closest<HTMLButtonElement>("button[data-tag]");
+      if (!b) return;
+      group.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+      const t = b.dataset.tag;
+      list.querySelectorAll<HTMLElement>("li").forEach((li) => (li.hidden = !!t && !li.dataset.tags!.split("|").includes(t)));
+    });
+  });
+  // 表紙のぞき見（マウスのときだけ）
+  const peek = document.querySelector<HTMLElement>(".peek");
+  if (peek && matchMedia("(pointer: fine)").matches) {
+    const cv = peek.querySelector("canvas")!, im = peek.querySelector("img")!;
+    let current: Element | null = null;
+    document.querySelectorAll<HTMLElement>("[data-article-index]").forEach((idx) => {
+      idx.addEventListener("pointermove", (e) => {
+        const row = (e.target as Element).closest<HTMLElement>(".row");
+        if (!row) { peek.classList.remove("on"); current = null; return; }
+        if (row !== current) {
+          current = row;
+          if (row.dataset.cover) { im.src = row.dataset.cover; im.hidden = false; cv.hidden = true; }
+          else { im.hidden = true; cv.hidden = false; peek.classList.add("on"); drawPattern(cv, JSON.parse(row.dataset.pal!), Number(row.dataset.seed) % 4, Number(row.dataset.seed)); }
+          peek.classList.add("on");
+        }
+        peek.style.left = Math.min(innerWidth - 160, e.clientX + 190) + "px";
+        peek.style.top = e.clientY + "px";
+      });
+      idx.addEventListener("pointerleave", () => { peek.classList.remove("on"); current = null; });
+    });
+  }
+</script>

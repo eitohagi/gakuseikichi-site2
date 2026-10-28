@@ -1,0 +1,31 @@
+---
+import type { GetStaticPaths } from "astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import ArticleView from "../../components/sections/ArticleView.astro";
+import { getSettings, getSiteData, memberMap } from "../../lib/content";
+import { cmsImg } from "../../lib/format";
+
+export const getStaticPaths = (async () => {
+  const data = await getSiteData();
+  return data.articles.map((a) => ({ params: { id: a.id }, props: { id: a.id } }));
+}) satisfies GetStaticPaths;
+
+const [settings, data] = await Promise.all([getSettings(), getSiteData()]);
+const byId = memberMap(data);
+const a = data.articles.find((x) => x.id === Astro.props.id)!;
+const author = a.authorId ? byId[a.authorId] : undefined;
+const related = data.articles.filter((x) => x.id !== a.id && x.authorId === a.authorId).slice(0, 3);
+const image = a.cover ? cmsImg(a.cover.url, 1200, { h: 630, fit: "crop" }) : null;
+const ld = {
+  "@context": "https://schema.org", "@type": "Article",
+  headline: a.title, description: a.excerpt, datePublished: a.publishedAt, dateModified: a.updatedAt,
+  author: author ? { "@type": "Person", name: author.name, url: new URL(`/members/${author.id}/`, Astro.site).href } : undefined,
+  publisher: { "@type": "Organization", name: settings.name },
+  image: image ?? undefined, mainEntityOfPage: new URL(`/articles/${a.id}/`, Astro.site).href,
+};
+---
+<BaseLayout title={a.title} description={a.excerpt || undefined} image={image} type="article" publishedAt={a.publishedAt} jsonLd={ld}>
+  <div class="in page-top">
+    <ArticleView article={a} author={author} authorIndex={author ? data.members.indexOf(author) : 0} related={related} />
+  </div>
+</BaseLayout>

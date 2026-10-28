@@ -1,0 +1,18 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import SectionHead from "../components/ui/SectionHead.astro";
+import DemoViewer from "../components/sections/DemoViewer.astro";
+import { getSiteData, memberMap } from "../lib/content";
+
+const data = await getSiteData();
+---
+<BaseLayout title="3Dデモ" description="メンバーの試作品を3Dで回して確かめられます。">
+  <div class="band page-top">
+    <div class="in">
+      <SectionHead nav="occipital" level={1} tone="dark">
+        <p>試作品を3Dで回して確かめられます。ドラッグで回転、ホイールかピンチで拡大します。</p>
+      </SectionHead>
+      <DemoViewer demos={data.demos} members={memberMap(data)} />
+    </div>
+  </div>
+</BaseLayout>

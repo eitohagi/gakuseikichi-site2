@@ -1,0 +1,92 @@
+---
+// 画面上部の帯と、全画面の目次
+import { NAV } from "../../config/site";
+interface Props { name: string; solidFrom?: "top" | "hero" }
+const { name, solidFrom = "top" } = Astro.props;
+const path = Astro.url.pathname;
+---
+<header class="bar" id="bar" data-solid-from={solidFrom}>
+  <div class="in">
+    <a class="mark" href="/" aria-label={`${name} トップへ`}><i aria-hidden="true"></i>{name}</a>
+    <button class="menu-btn" id="menuOpen" type="button" aria-expanded="false" aria-controls="menu"><b aria-hidden="true"></b>目次</button>
+  </div>
+</header>
+
+<nav class="menu" id="menu" hidden aria-label="目次">
+  <div class="in">
+    <div class="menu-top">
+      <a class="mark" href="/"><i aria-hidden="true"></i>{name}</a>
+      <button class="menu-btn" id="menuClose" type="button"><b aria-hidden="true"></b>閉じる</button>
+    </div>
+    <ul>
+      {NAV.map((n) => (
+        <li>
+          <a href={n.href} aria-current={path.startsWith(n.href) ? "page" : undefined}>
+            <small>{n.lobe}</small><span>{n.label}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </div>
+</nav>
+
+<style>
+  .bar { position: fixed; top: env(safe-area-inset-top, 0px); left: 0; right: 0; z-index: 40; pointer-events: none; transition: background 0.3s; }
+  .bar .in { display: flex; justify-content: space-between; align-items: center; padding-block: 18px; transition: padding 0.3s; }
+  .bar:global(.solid) { background: color-mix(in srgb, var(--washi) 88%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: 0 1px 0 var(--rule); pointer-events: auto; }
+  .bar:global(.solid) .in { padding-block: 10px; }
+  .mark { pointer-events: auto; text-decoration: none; font-family: var(--f-mincho); font-weight: 900; font-size: 17px; letter-spacing: 0.06em; display: flex; gap: 10px; align-items: center; }
+  .mark i { width: 14px; height: 14px; border-radius: 50%; background: var(--kihada); box-shadow: inset 0 0 0 3px var(--ai); }
+  .menu-btn { pointer-events: auto; border: 0; background: var(--ai); color: var(--on-ai); border-radius: 999px; padding: 9px 18px 9px 16px; cursor: pointer; font-size: 14px; display: flex; gap: 10px; align-items: center; }
+  .menu-btn b { display: inline-grid; gap: 3px; }
+  .menu-btn b::before, .menu-btn b::after { content: ""; width: 16px; height: 1.5px; background: var(--kihada); display: block; }
+  .menu-btn:hover { background: var(--ai-deep); }
+
+  .menu { position: fixed; inset: 0; z-index: 70; background: var(--ai); color: var(--on-ai); overflow-y: auto; padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px); }
+  .menu .in { padding-block: 18px 48px; }
+  .menu-top { display: flex; justify-content: space-between; align-items: center; }
+  .menu .mark i { box-shadow: inset 0 0 0 3px var(--on-ai); }
+  .menu .menu-btn { background: var(--kihada); color: var(--ai); }
+  .menu .menu-btn b::before, .menu .menu-btn b::after { background: var(--ai); }
+  .menu ul { list-style: none; margin: 6vh 0 0; padding: 0; }
+  .menu li a { display: grid; grid-template-columns: 5em 1fr; align-items: baseline; gap: 20px; text-decoration: none; padding: 10px 0; border-top: 1px solid var(--on-ai-rule); }
+  .menu li a small { font-size: 14px; color: var(--kihada); }
+  .menu li a span { font-size: clamp(28px, 5.4vw, 60px); font-weight: 700; line-height: 1.25; }
+  .menu li a:hover span, .menu li a[aria-current="page"] span { color: var(--kihada); }
+</style>
+
+<script>
+  const bar = document.getElementById("bar")!;
+  const menu = document.getElementById("menu")!;
+  const open = document.getElementById("menuOpen")!;
+  const close = document.getElementById("menuClose")!;
+  const hero = document.getElementById("hero");
+  const threshold = () => (bar.dataset.solidFrom === "hero" && hero ? hero.offsetHeight - 80 : 24);
+  const onScroll = () => bar.classList.toggle("solid", scrollY > threshold());
+  addEventListener("scroll", onScroll, { passive: true });
+  onScroll();
+
+  function shut(focusBack = true) {
+    menu.hidden = true;
+    open.setAttribute("aria-expanded", "false");
+    document.documentElement.style.overflow = "";
+    if (focusBack) open.focus({ preventScroll: true });
+  }
+  open.addEventListener("click", () => {
+    menu.hidden = false;
+    open.setAttribute("aria-expanded", "true");
+    document.documentElement.style.overflow = "hidden";
+    close.focus();
+  });
+  close.addEventListener("click", () => shut());
+  menu.addEventListener("click", (e) => { if ((e.target as Element).closest("a")) shut(false); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !menu.hidden) shut(); });
+  // 目次の中だけでTabが回るようにする
+  menu.addEventListener("keydown", (e) => {
+    if (e.key !== "Tab") return;
+    const items = [...menu.querySelectorAll<HTMLElement>("a,button")];
+    const firstEl = items[0], lastEl = items[items.length - 1];
+    if (e.shiftKey && document.activeElement === firstEl) { e.preventDefault(); lastEl.focus(); }
+    else if (!e.shiftKey && document.activeElement === lastEl) { e.preventDefault(); firstEl.focus(); }
+  });
+</script>

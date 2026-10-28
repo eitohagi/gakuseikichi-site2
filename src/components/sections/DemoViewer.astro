@@ -1,0 +1,87 @@
+---
+// 3Dデモの表示枠と、モデルの選択。three.js は近くまでスクロールしてから読み込む
+import type { Demo, Member } from "../../lib/content";
+interface Props { demos: Demo[]; members: Record<string, Member> }
+const { demos, members } = Astro.props;
+const items = demos.map((d) => ({ id: d.id, preset: d.preset, modelUrl: d.modelUrl }));
+---
+{demos.length > 0 ? (
+  <div class="demo" data-demo>
+    <div class="stage">
+      <canvas data-three data-items={JSON.stringify(items)} aria-label="試作品の3Dモデル。ドラッグで回転できます"></canvas>
+      <p class="status" data-status hidden></p>
+      <div class="ctl">
+        <button type="button" data-auto aria-pressed="true">自動回転</button>
+        <button type="button" data-wire aria-pressed="false">骨組みを見る</button>
+      </div>
+    </div>
+    <div>
+      <ul class="picks">
+        {demos.map((d, i) => {
+          const maker = d.makerId ? members[d.makerId] : undefined;
+          return (
+            <li>
+              <button type="button" data-pick={i} aria-pressed={i === 0 ? "true" : "false"}>
+                <b>{d.title}</b>{maker && <span>{maker.name}　{maker.project}</span>}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      {demos.map((d, i) => (
+        <div class="info" data-info={i} hidden={i !== 0}>
+          <p>{d.description}</p>
+          {d.specs.length > 0 && <dl>{d.specs.map((s) => <><dt>{s.label}</dt><dd>{s.value}</dd></>)}</dl>}
+        </div>
+      ))}
+    </div>
+  </div>
+) : <p class="none">3Dデモはまだ登録されていません。</p>}
+
+<style>
+  .demo { display: grid; grid-template-columns: minmax(0, 8fr) minmax(0, 4fr); gap: 40px; align-items: center; }
+  @media (max-width: 900px) { .demo { grid-template-columns: 1fr; } }
+  .stage { position: relative; }
+  canvas { width: 100%; aspect-ratio: 4 / 3; display: block; cursor: grab; touch-action: none; }
+  canvas:active { cursor: grabbing; }
+  .status { position: absolute; inset: 0; display: grid; place-items: center; color: var(--on-ai-2); font-size: 14px; pointer-events: none; text-align: center; padding: 20px; }
+  .ctl { position: absolute; left: 0; bottom: 0; display: flex; gap: 16px; font-size: 13px; }
+  .ctl button { border: 0; background: none; color: var(--on-ai-2); cursor: pointer; padding: 4px 0; border-bottom: 1px solid transparent; }
+  .ctl button[aria-pressed="true"] { color: var(--kihada); border-bottom-color: var(--kihada); }
+  .picks { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--on-ai-rule); }
+  .picks button { width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--on-ai-rule); background: none; color: var(--on-ai); padding: 16px 0; cursor: pointer; display: grid; gap: 2px; }
+  .picks b { font-size: 22px; font-weight: 700; transition: color 0.2s; }
+  .picks span { font-size: 13px; color: var(--on-ai-2); }
+  .picks button[aria-pressed="true"] b, .picks button:hover b { color: var(--kihada); }
+  .info { margin-top: 22px; font-size: 14.5px; line-height: 1.8; color: var(--on-ai); }
+  dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 18px; margin: 14px 0 0; font-size: 13.5px; }
+  dt { color: var(--kihada); }
+  dd { margin: 0; }
+  .none { color: var(--on-ai-2); }
+</style>
+
+<script>
+  document.querySelectorAll<HTMLElement>("[data-demo]").forEach((root) => {
+    const canvas = root.querySelector<HTMLCanvasElement>("[data-three]")!;
+    const picks = root.querySelectorAll<HTMLButtonElement>("[data-pick]");
+    const infos = root.querySelectorAll<HTMLElement>("[data-info]");
+    let api: { show: (i: number) => Promise<void> } | null = null;
+    const select = (i: number) => {
+      picks.forEach((p) => p.setAttribute("aria-pressed", String(Number(p.dataset.pick) === i)));
+      infos.forEach((el) => (el.hidden = Number(el.dataset.info) !== i));
+      void api?.show(i);
+    };
+    picks.forEach((p) => p.addEventListener("click", () => select(Number(p.dataset.pick))));
+    const io = new IntersectionObserver(async (entries) => {
+      if (!entries.some((e) => e.isIntersecting)) return;
+      io.disconnect();
+      const { initDemo } = await import("../../scripts/demo3d");
+      api = initDemo(canvas, JSON.parse(canvas.dataset.items || "[]"), {
+        status: root.querySelector("[data-status]")!,
+        auto: root.querySelector("[data-auto]")!,
+        wire: root.querySelector("[data-wire]")!,
+      });
+    }, { rootMargin: "400px" });
+    io.observe(canvas);
+  });
+</script>

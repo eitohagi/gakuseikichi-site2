@@ -1,0 +1,33 @@
+---
+// 参加フォーム
+---
+<div class="join">
+  <p class="big">学生でも、学生でなくても。あなたの<mark>「すき」</mark>をひとつ持ってきてください。</p>
+  <form class="uform" data-apply="join">
+    <label>名前<input name="name" required maxlength="40" autocomplete="name" /></label>
+    <label>連絡先メール<input name="email" type="email" required maxlength="120" autocomplete="email" /></label>
+    <label>いちばん「すき」なこと<input name="like" required maxlength="60" placeholder="例：路地裏の看板を集めること" /></label>
+    <label>関わり方
+      <select name="way">
+        <option>メンバーになる</option>
+        <option>コミュニティに参加する</option>
+        <option>プロジェクトを応援する</option>
+      </select>
+    </label>
+    <input class="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" />
+    <button class="go" type="submit">送信する</button>
+    <p class="note" data-msg aria-live="polite">入力内容は運営メンバーだけが見られます。返事はメールで届きます。<a href="/privacy/">個人情報の扱い</a></p>
+  </form>
+</div>
+
+<style>
+  .join { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: clamp(32px, 6vw, 96px); align-items: end; }
+  @media (max-width: 860px) { .join { grid-template-columns: 1fr; } }
+  .big { font-size: clamp(32px, 5.2vw, 76px); line-height: 1.3; font-weight: 700; letter-spacing: 0.01em; }
+  mark { background: none; color: inherit; box-shadow: inset 0 -0.28em 0 var(--kihada); }
+</style>
+
+<script>
+  import { initApplyForms } from "../../scripts/forms";
+  initApplyForms();
+</script>

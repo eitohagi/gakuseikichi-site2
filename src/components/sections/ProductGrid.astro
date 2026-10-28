@@ -1,0 +1,71 @@
+---
+// プロダクトの並び。購入は Stripe の支払いリンクへ
+import type { Member, Product } from "../../lib/content";
+import ArtTile from "../ui/ArtTile.astro";
+import { yen } from "../../lib/format";
+interface Props { products: Product[]; members: Record<string, Member>; sortable?: boolean }
+const { products, members, sortable = false } = Astro.props;
+---
+{sortable && products.length > 1 && (
+  <div class="filters sort" role="group" aria-label="並び替え" data-product-sort>
+    <button type="button" data-sort="new" aria-pressed="true">新着</button>
+    <button type="button" data-sort="low" aria-pressed="false">安い順</button>
+    <button type="button" data-sort="high" aria-pressed="false">高い順</button>
+  </div>
+)}
+<div class="goods" data-products>
+  {products.map((p, i) => {
+    const maker = p.makerId ? members[p.makerId] : undefined;
+    return (
+      <article data-price={p.price} data-order={i}>
+        <ArtTile image={p.image} color={maker?.color ?? "藍"} seed={i} ratio={1.25} sizes="(max-width: 900px) 50vw, 33vw" alt={p.name} />
+        <h3 class="name">{p.name}</h3>
+        {maker && <p class="by"><a href={`/members/${maker.id}/`}>{maker.name}</a>　{maker.project}</p>}
+        <div class="row">
+          <span class="price"><small>¥</small>{yen(p.price)}<span class="sr">円（税込）</span></span>
+          {p.soldOut ? <span class="buy off">売り切れ</span>
+            : p.paymentLink ? <a class="buy" href={p.paymentLink} target="_blank" rel="noopener">購入する<span class="sr">（決済ページが新しいタブで開きます）</span></a>
+            : <span class="buy off">準備中</span>}
+        </div>
+      </article>
+    );
+  })}
+</div>
+{products.length === 0 && <p class="empty">まだ商品はありません。</p>}
+
+<style>
+  .sort { margin-bottom: 28px; }
+  .goods { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 56px 32px; }
+  .goods > article:nth-child(3n + 2) { margin-top: 72px; }
+  @media (max-width: 900px) {
+    .goods { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px 20px; }
+    .goods > article:nth-child(3n + 2) { margin-top: 0; }
+    .goods > article:nth-child(2n) { margin-top: 48px; }
+  }
+  .name { font-size: 18px; font-weight: 700; margin-top: 16px; line-height: 1.5; }
+  .by { font-size: 13px; color: var(--ai-2); }
+  .by a { text-decoration: none; }
+  .by a:hover { text-decoration: underline; }
+  .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 12px; border-top: 1px solid var(--ai); padding-top: 12px; flex-wrap: wrap; }
+  .price { font-family: var(--f-display); font-size: 26px; font-weight: 600; font-variation-settings: "wdth" 75; font-variant-numeric: tabular-nums; }
+  .price small { font-size: 14px; margin-right: 2px; }
+  .buy { border: 1px solid var(--ai); background: transparent; border-radius: 999px; padding: 7px 16px; font-size: 13.5px; font-weight: 700; text-decoration: none; }
+  a.buy:hover { background: var(--ai); color: var(--on-ai); }
+  .off { border-style: dashed; color: var(--ai-2); font-weight: 400; }
+  .empty { color: var(--ai-2); }
+</style>
+
+<script>
+  document.querySelectorAll<HTMLElement>("[data-product-sort]").forEach((group) => {
+    const grid = group.nextElementSibling as HTMLElement;
+    const cards = [...grid.children] as HTMLElement[];
+    group.addEventListener("click", (e) => {
+      const b = (e.target as Element).closest<HTMLButtonElement>("button[data-sort]");
+      if (!b) return;
+      group.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+      const by = b.dataset.sort;
+      const n = (el: HTMLElement, k: string) => Number(el.dataset[k]);
+      grid.append(...[...cards].sort((a, c) => by === "low" ? n(a, "price") - n(c, "price") : by === "high" ? n(c, "price") - n(a, "price") : n(a, "order") - n(c, "order")));
+    });
+  });
+</script>

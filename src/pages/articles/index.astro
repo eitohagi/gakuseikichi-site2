@@ -1,0 +1,17 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import SectionHead from "../../components/ui/SectionHead.astro";
+import ArticleIndex from "../../components/sections/ArticleIndex.astro";
+import { getSiteData, memberMap } from "../../lib/content";
+
+const data = await getSiteData();
+---
+<BaseLayout title="記事" description="メンバーが書いた、プロジェクトの途中経過、失敗、発見の記録です。">
+  <div class="in page-top">
+    <SectionHead nav="hippo" level={1}>
+      <p>メンバーがプロジェクトの途中経過、失敗、発見を書き残しています。書いた時点の予報も一緒に残るので、予報の移り変わりをさかのぼれます。</p>
+      <span slot="aside" class="count">{data.articles.length}本の記事</span>
+    </SectionHead>
+    <ArticleIndex articles={data.articles} members={memberMap(data)} filters />
+  </div>
+</BaseLayout>

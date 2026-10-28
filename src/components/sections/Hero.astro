@@ -1,0 +1,93 @@
+---
+// トップの見せ場：脳の神経網と、カーソルに反応して文字幅が変わる大きなロゴ
+import { NAV, type SiteSettings } from "../../config/site";
+import type { Member } from "../../lib/content";
+import { paletteOf } from "../../lib/palette";
+interface Props { settings: SiteSettings; members: Member[] }
+const { settings, members } = Astro.props;
+const lobes = NAV.map((n) => ({ key: n.key, ja: n.lobe, label: n.short, href: n.href }));
+const dots = members.map((m) => ({ id: m.id, name: m.name, project: m.project, color: paletteOf(m.color)[0], href: `/members/${m.id}/` }));
+const words = settings.nameEn.toLowerCase().split(/\s+/).filter(Boolean).slice(0, 3);
+---
+<section class="hero" id="hero" aria-labelledby="hero-title">
+  <canvas
+    id="brain"
+    data-cursor-self
+    data-lobes={JSON.stringify(lobes)}
+    data-members={JSON.stringify(dots)}
+    role="img"
+    aria-label="脳の図。部位を押すと各ページへ、光る点を押すとメンバーのページへ移動します"
+  ></canvas>
+  <div class="tip" id="brain-tip" hidden></div>
+  <div class="in">
+    <div class="intro">
+      <p class="lede" set:html={settings.lede.replace(/\n/g, "<br>")} />
+      <p class="mission">{settings.mission}</p>
+    </div>
+    <h1 class="word" id="hero-title">
+      <span class="sr">{settings.name}</span>
+      {words.map((w) => <span class="line" aria-hidden="true">{[...w].map((ch) => <i>{ch}</i>)}</span>)}
+    </h1>
+    <nav class="lobe-list" aria-label="脳の部位から選ぶ">
+      <p aria-hidden="true">脳の部位を押すと、それぞれのページへ移動します。光る点はメンバーです。</p>
+      <ul class="sr">{lobes.map((l) => <li><a href={l.href}>{l.ja}：{l.label}</a></li>)}</ul>
+    </nav>
+  </div>
+</section>
+
+<style>
+  .hero { position: relative; height: clamp(620px, 88vh, 880px); overflow: hidden; }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: pan-y; }
+  .in { position: relative; height: 100%; pointer-events: none; }
+  .intro { position: absolute; top: 100px; left: var(--gut); max-width: 25em; pointer-events: auto; }
+  .lede { font-size: clamp(19px, 1.8vw, 24px); line-height: 1.7; font-weight: 700; }
+  .mission { margin-top: 14px; font-size: 14px; color: var(--ai-2); line-height: 1.8; max-width: 26em; }
+  .word {
+    position: absolute; left: calc(var(--gut) - 0.04em); bottom: clamp(18px, 3vw, 40px); margin: 0;
+    font-family: var(--f-display); font-weight: 800; font-size: clamp(68px, min(15vw, 22vh), 240px); line-height: 0.8; letter-spacing: -0.025em;
+    pointer-events: none; white-space: nowrap;
+  }
+  .line { display: block; }
+  .line:last-child { position: relative; z-index: 0; }
+  .line:last-child::after { content: ""; position: absolute; left: 0.04em; width: 1.9em; bottom: 0.06em; height: 0.12em; background: var(--kihada); z-index: -1; }
+  i { font-style: normal; display: inline-block; font-variation-settings: "wdth" 70, "wght" 800; transition: font-variation-settings 0.35s var(--ease); }
+  .lobe-list { position: absolute; right: var(--gutR); bottom: clamp(22px, 3vw, 44px); font-size: 13px; color: var(--ai-2); max-width: 15em; text-align: right; }
+  .tip { position: absolute; z-index: 5; pointer-events: none; background: var(--ai); color: var(--on-ai); font-size: 13px; padding: 8px 12px; border-radius: 2px; line-height: 1.5; transform: translate(-50%, calc(-100% - 14px)); white-space: nowrap; }
+  .tip :global(b) { color: var(--kihada); }
+  @media (max-width: 760px) {
+    .hero { height: auto; padding-top: 64px; }
+    canvas { position: relative; aspect-ratio: 1 / 1.05; height: auto; }
+    .in { height: auto; padding-bottom: 28px; }
+    .intro { position: static; padding-top: 6px; }
+    .word { position: static; margin-top: 28px; font-size: min(24vw, 140px); }
+    .lobe-list { position: static; text-align: left; margin-top: 16px; max-width: none; }
+  }
+</style>
+
+<script>
+  import { initBrain } from "../../scripts/brain";
+  const cv = document.getElementById("brain") as HTMLCanvasElement | null;
+  if (cv) initBrain(cv, document.getElementById("brain-tip")!, JSON.parse(cv.dataset.lobes!), JSON.parse(cv.dataset.members!));
+
+  // ロゴ：開いたときに文字が広がり、マウスを近づけると近くの文字だけ横に伸びる
+  const hero = document.getElementById("hero");
+  const letters = [...document.querySelectorAll<HTMLElement>("#hero-title i")];
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const setW = (el: HTMLElement, w: number) => (el.style.fontVariationSettings = `"wdth" ${w.toFixed(1)}, "wght" 800`);
+  let live = reduce;
+  if (!reduce) {
+    letters.forEach((l) => { l.style.transition = "none"; setW(l, 50); });
+    requestAnimationFrame(() => requestAnimationFrame(() =>
+      letters.forEach((l, i) => { l.style.transition = `font-variation-settings .9s cubic-bezier(.2,.7,.2,1) ${i * 45}ms`; setW(l, 70); })));
+    setTimeout(() => { letters.forEach((l) => (l.style.transition = "")); live = true; }, 1900);
+    hero?.addEventListener("pointermove", (e) => {
+      if (!live || e.pointerType !== "mouse") return;
+      for (const l of letters) {
+        const b = l.getBoundingClientRect();
+        const d = Math.hypot(e.clientX - (b.left + b.width / 2), (e.clientY - (b.top + b.height / 2)) * 0.6);
+        setW(l, 70 + 80 * Math.exp(-(d * d) / (2 * 170 * 170)));
+      }
+    });
+    hero?.addEventListener("pointerleave", () => { if (live) letters.forEach((l) => setW(l, 70)); });
+  }
+</script>

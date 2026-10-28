@@ -1,0 +1,85 @@
+---
+import type { GetStaticPaths } from "astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import Portrait from "../../components/ui/Portrait.astro";
+import Forecast from "../../components/ui/Forecast.astro";
+import ArticleIndex from "../../components/sections/ArticleIndex.astro";
+import ProductGrid from "../../components/sections/ProductGrid.astro";
+import { getSettings, getSiteData, memberMap } from "../../lib/content";
+import { shortName } from "../../lib/format";
+
+export const getStaticPaths = (async () => {
+  const data = await getSiteData();
+  return data.members.map((m, i) => ({ params: { id: m.id }, props: { index: i } }));
+}) satisfies GetStaticPaths;
+
+const { index } = Astro.props;
+const [settings, data] = await Promise.all([getSettings(), getSiteData()]);
+const byId = memberMap(data);
+const m = data.members[index];
+const articles = data.articles.filter((a) => a.authorId === m.id);
+const products = data.products.filter((p) => p.makerId === m.id);
+const others = data.members.filter((x) => x.id !== m.id);
+const person = {
+  "@context": "https://schema.org", "@type": "Person", name: m.name, description: m.description || undefined, jobTitle: m.role,
+  memberOf: { "@type": "Organization", name: settings.name }, url: new URL(`/members/${m.id}/`, Astro.site).href,
+};
+---
+<BaseLayout title={m.project ? `${m.name}（${m.project}）` : m.name} description={m.project ? `${m.name}のプロジェクト「${m.project}」。${m.description}` : `${settings.name}の${m.role}、${m.name}のページです。`} jsonLd={person}>
+  <div class="in page-top">
+    <nav class="crumb" aria-label="現在地"><a href="/members/">プロジェクトと未来予報</a></nav>
+    <div class="top">
+      <div class="pic"><Portrait member={m} seed={index} /></div>
+      <div class="body">
+        <p class="field">{m.role}{m.field && <>　{m.field}</>}</p>
+        <h1>{m.name}</h1>
+        {m.project ? <p class="proj">{m.project}</p> : <p class="desc">プロジェクトは準備中です。</p>}
+        {m.description && <p class="desc">{m.description}</p>}
+        {m.forecast && <div class="fcw"><Forecast forecast={m.forecast} label="いまの未来予報" /></div>}
+      </div>
+    </div>
+
+    <section class="block" aria-labelledby="h-a">
+      <h2 class="h" id="h-a">{shortName(m.name)}さんの記事</h2>
+      {articles.length ? <ArticleIndex articles={articles} members={byId} showAuthor={false} /> : <p class="none">まだ記事がありません。</p>}
+    </section>
+
+    {products.length > 0 && (
+      <section class="block" aria-labelledby="h-p">
+        <h2 class="h" id="h-p">{shortName(m.name)}さんのプロダクト</h2>
+        <ProductGrid products={products} members={byId} />
+      </section>
+    )}
+
+    {others.length > 0 && (
+      <section class="block" aria-labelledby="h-o">
+        <h2 class="h" id="h-o">ほかのメンバー</h2>
+        <ul class="others">
+          {others.map((o) => <li><a href={`/members/${o.id}/`}><span>{o.name}</span><small>{o.project || o.role}</small></a></li>)}
+        </ul>
+      </section>
+    )}
+  </div>
+</BaseLayout>
+
+<style>
+  .crumb { font-size: 14px; margin-bottom: 28px; }
+  .crumb a { text-decoration: none; color: var(--ai-2); }
+  .crumb a::before { content: "‹ "; }
+  .crumb a:hover { color: var(--ai); }
+  .top { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(32px, 6vw, 96px); align-items: start; }
+  @media (max-width: 860px) { .top { grid-template-columns: 1fr; } .pic { max-width: 420px; } }
+  .field { font-family: var(--f-display); font-size: 15px; color: var(--ai-2); font-variation-settings: "wdth" 80; }
+  h1 { font-size: clamp(40px, 6vw, 84px); line-height: 1.15; margin-top: 6px; }
+  .proj { font-size: 22px; margin-top: 18px; font-weight: 700; }
+  .desc { font-size: 16px; color: var(--ai-2); margin-top: 8px; max-width: 30em; }
+  .fcw { margin-top: 40px; max-width: 520px; }
+  .block { margin-top: var(--section); }
+  .h { font-size: clamp(24px, 2.6vw, 34px); margin-bottom: 24px; }
+  .none { color: var(--ai-2); }
+  .others { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); border-top: 1px solid var(--ai); }
+  .others a { display: grid; padding: 14px 16px 14px 0; text-decoration: none; border-bottom: 1px solid var(--rule); }
+  .others span { font-size: 18px; font-weight: 700; }
+  .others small { font-size: 13px; color: var(--ai-2); }
+  .others a:hover span { text-decoration: underline; text-decoration-color: var(--kihada); text-decoration-thickness: 4px; text-underline-offset: 5px; }
+</style>

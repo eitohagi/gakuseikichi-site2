@@ -1,0 +1,22 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import SectionHead from "../components/ui/SectionHead.astro";
+import ProductGrid from "../components/sections/ProductGrid.astro";
+import { getSiteData, memberMap } from "../lib/content";
+
+const data = await getSiteData();
+---
+<BaseLayout title="プロダクト" description="メンバーのプロジェクトから生まれたモノを買えます。">
+  <div class="in page-top">
+    <SectionHead nav="parietal" level={1}>
+      <p>メンバーのプロジェクトから生まれたモノを買えます。「購入する」を押すと、決済ページ（Stripe）が新しいタブで開きます。</p>
+      <span slot="aside" class="count">{data.products.length}点</span>
+    </SectionHead>
+    <ProductGrid products={data.products} members={memberMap(data)} sortable />
+    <p class="law">販売者、送料、返品などの表示は <a href="/legal/">特定商取引法に基づく表記</a> をご覧ください。</p>
+  </div>
+</BaseLayout>
+
+<style>
+  .law { margin-top: 64px; font-size: 13px; color: var(--ai-2); }
+</style>

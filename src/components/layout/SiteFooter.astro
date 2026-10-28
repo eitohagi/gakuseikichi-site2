@@ -1,0 +1,63 @@
+---
+import { NAV, type SiteSettings } from "../../config/site";
+import { isConfigured } from "../../lib/content";
+interface Props { settings: SiteSettings }
+const { settings: s } = Astro.props;
+const socials = [
+  s.instagram && { label: "Instagram", href: `https://www.instagram.com/${s.instagram}/` },
+  s.youtube && { label: "YouTube", href: s.youtube },
+  s.x && { label: "X", href: `https://x.com/${s.x}` },
+].filter(Boolean) as { label: string; href: string }[];
+const year = new Date().getFullYear();
+---
+<footer class="foot">
+  <div class="in grid">
+    <div>
+      <p class="name">{s.name}</p>
+      <p class="mission">{s.mission}</p>
+    </div>
+    <nav aria-label="サイト内のページ">
+      <ul class="links">
+        {NAV.map((n) => <li><a href={n.href}>{n.label}</a></li>)}
+      </ul>
+    </nav>
+    <div class="contact">
+      {s.email && <p>連絡先<br /><span class="mail">{s.email}</span></p>}
+      {socials.length > 0 && (
+        <ul class="sns">{socials.map((x) => <li><a href={x.href} target="_blank" rel="noopener">{x.label}</a></li>)}</ul>
+      )}
+      <ul class="legal">
+        <li><a href="/privacy/">個人情報の扱い</a></li>
+        <li><a href="/legal/">特定商取引法に基づく表記</a></li>
+        <li><a href="/rss.xml">記事のRSS</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="in small">
+    <span>© {year} {s.name}</span>
+    {!isConfigured && <span>記事、コミュニティ、商品、3Dデモはサンプルです。</span>}
+  </div>
+  <p class="giant" aria-hidden="true" style={`--n:${Math.max(6, s.nameEn.length)}`}>{s.nameEn}</p>
+</footer>
+
+<style>
+  .foot { margin-top: clamp(100px, 14vw, 200px); border-top: 1px solid var(--ai); overflow: hidden; }
+  .grid { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 4fr) minmax(0, 3fr); gap: 32px; padding-block: 40px 28px; }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+  .name { font-size: 24px; font-weight: 900; letter-spacing: 0.06em; }
+  .mission { font-size: 14px; color: var(--ai-2); margin-top: 6px; max-width: 24em; }
+  .links { list-style: none; margin: 0; padding: 0; columns: 2; column-gap: 24px; font-size: 14px; }
+  .links li { break-inside: avoid; padding: 3px 0; }
+  .links a, .contact a { text-decoration: none; }
+  .links a:hover, .contact a:hover { text-decoration: underline; text-decoration-color: var(--kihada); text-decoration-thickness: 3px; text-underline-offset: 4px; }
+  .contact { font-size: 14px; display: grid; gap: 12px; align-content: start; }
+  .mail { user-select: all; font-family: var(--f-display); font-variation-settings: "wdth" 90; }
+  .legal { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: 13px; }
+  .sns { list-style: none; margin: 0; padding: 0; display: flex; gap: 16px; }
+  .small { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 12.5px; color: var(--ai-2); padding-bottom: 18px; }
+  .giant {
+    font-family: var(--f-display); font-weight: 900; font-size: calc(96vw / (var(--n) * 0.86)); line-height: 0.74; letter-spacing: -0.04em;
+    font-variation-settings: "wdth" 150, "wght" 900; white-space: nowrap; margin: 0 0 -0.08em -0.03em; color: var(--ai);
+    padding-bottom: env(safe-area-inset-bottom, 0px); text-transform: lowercase;
+  }
+</style>

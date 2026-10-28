@@ -1,0 +1,26 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import SectionHead from "../../components/ui/SectionHead.astro";
+import MemberPlate from "../../components/ui/MemberPlate.astro";
+import { getSettings, getSiteData } from "../../lib/content";
+
+const [settings, data] = await Promise.all([getSettings(), getSiteData()]);
+---
+<BaseLayout title="プロジェクトと未来予報" description={`${settings.name}のメンバーと、それぞれのプロジェクト、未来予報の一覧です。`}>
+  <div class="in page-top">
+    <SectionHead nav="frontal" title={"プロジェクトと\n未来予報"} level={1}>
+      <p>メンバーそれぞれが、自分のプロジェクトを通して見える未来を、天気予報のように出します。確率と一緒に、その未来に向けて今日できる行動を添えています。</p>
+      <span slot="aside" class="count">メンバー {data.members.length}人</span>
+    </SectionHead>
+    <div class="grid">
+      {data.members.map((m, i) => (
+        <MemberPlate member={m} seed={i} headingLevel={2} articleCount={data.articles.filter((a) => a.authorId === m.id).length} />
+      ))}
+    </div>
+    {data.members.length === 0 && <p>メンバーはまだ登録されていません。</p>}
+  </div>
+</BaseLayout>
+
+<style>
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 72px clamp(24px, 3vw, 48px); }
+</style>

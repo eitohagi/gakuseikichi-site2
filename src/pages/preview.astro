@@ -1,0 +1,45 @@
+---
+// 下書きプレビュー。microCMS の「画面プレビュー」から開く：
+//   https://<サイト>/preview?id={CONTENT_ID}&draftKey={DRAFT_KEY}
+// draftKey を知っている人だけが見られる。検索エンジンには載せない。
+import BaseLayout from "../layouts/BaseLayout.astro";
+import ArticleView from "../components/sections/ArticleView.astro";
+import { client, normalize, type Article, type Member } from "../lib/content";
+import { SAMPLE } from "../lib/content/sample";
+
+export const prerender = false;
+Astro.response.headers.set("Cache-Control", "private, no-store");
+Astro.response.headers.set("X-Robots-Tag", "noindex");
+
+const id = Astro.url.searchParams.get("id") ?? "";
+const draftKey = Astro.url.searchParams.get("draftKey") ?? "";
+let view: { article: Article; author?: Member } | null = null;
+let error = "";
+
+if (!/^[\w-]{1,100}$/.test(id)) {
+  error = "プレビューする記事のIDがありません。microCMS の「画面プレビュー」ボタンから開いてください。";
+} else if (!client) {
+  const a = SAMPLE.articles.find((x) => x.id === id);
+  if (a) view = { article: a, author: SAMPLE.members.find((m) => m.id === a.authorId) };
+  else error = "サンプルにその記事はありません。";
+} else {
+  try {
+    const raw = await client.get<Record<string, any>>({ endpoint: "articles", contentId: id, queries: draftKey ? { draftKey } : {} });
+    const d = normalize({ articles: [raw], members: raw.author && typeof raw.author === "object" ? [raw.author] : [] });
+    view = { article: d.articles[0], author: d.members[0] };
+  } catch {
+    error = "記事を読み込めませんでした。下書きを一度保存してから、もう一度「画面プレビュー」を押してください。";
+  }
+}
+if (error) Astro.response.status = 404;
+---
+<BaseLayout title={view ? `プレビュー：${view.article.title}` : "プレビュー"} noindex>
+  <div class="in page-top">
+    <p class="bar">下書きのプレビューです。まだ公開されていません。</p>
+    {view ? <ArticleView article={view.article} author={view.author} /> : <p>{error}</p>}
+  </div>
+</BaseLayout>
+
+<style>
+  .bar { background: var(--kihada); font-weight: 700; font-size: 14px; padding: 8px 14px; margin-bottom: 32px; max-width: 760px; margin-inline: auto; }
+</style>

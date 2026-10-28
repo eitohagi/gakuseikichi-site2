@@ -1,0 +1,96 @@
+---
+// コミュニティの一覧。名前を押すと、説明と申し込みフォームが開く
+import type { Community } from "../../lib/content";
+interface Props { communities: Community[]; filters?: boolean }
+const { communities, filters = true } = Astro.props;
+const types = [...new Set(communities.map((c) => c.type))];
+---
+{filters && types.length > 1 && (
+  <div class="filters bar" role="group" aria-label="種類で絞り込む" data-community-filters>
+    <button type="button" data-type="" aria-pressed="true">すべて</button>
+    {types.map((t) => <button type="button" data-type={t} aria-pressed="false">{t}</button>)}
+  </div>
+)}
+<ul class="clist" data-community-list>
+  {communities.map((c) => (
+    <li class="item" data-type={c.type}>
+      <button class="head" type="button" aria-expanded="false" aria-controls={`cb-${c.id}`} id={`ch-${c.id}`}>
+        <span><span class="n">{c.name}</span><span class="mob">{[c.type, c.frequency, c.memberCount ? `${c.memberCount}人` : ""].filter(Boolean).join("、")}</span></span>
+        <span class="m">{c.type}</span>
+        <span class="m">{c.frequency}</span>
+        <span class="m">{c.memberCount > 0 && <><b>{c.memberCount}</b>人</>}</span>
+        <span class="pm" aria-hidden="true"></span>
+      </button>
+      <div class="body" id={`cb-${c.id}`} role="region" aria-labelledby={`ch-${c.id}`}>
+        <div><div class="inner">
+          <div>
+            <p>{c.description}</p>
+            {c.tags.length > 0 && <p class="tags">{c.tags.map((t) => <span>#{t}</span>)}</p>}
+          </div>
+          <form class="uform" data-apply="community" data-community={c.name}>
+            <label>名前<input name="name" required maxlength="40" autocomplete="name" /></label>
+            <label>連絡先メール<input name="email" type="email" required maxlength="120" autocomplete="email" /></label>
+            <label>ひとこと（任意）<input name="message" maxlength="200" /></label>
+            <input class="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" />
+            <button class="go" type="submit">{c.name}に申し込む</button>
+            <p class="note" data-msg aria-live="polite">入力内容は運営メンバーだけが見られます。<a href="/privacy/">個人情報の扱い</a></p>
+          </form>
+        </div></div>
+      </div>
+    </li>
+  ))}
+</ul>
+{communities.length === 0 && <p class="empty">まだ紹介できるコミュニティがありません。</p>}
+
+<style>
+  .bar { margin-bottom: 22px; }
+  .clist { list-style: none; margin: 0; padding: 0; border-bottom: 1px solid var(--ai); }
+  .item { border-top: 1px solid var(--ai); }
+  .head { width: 100%; border: 0; background: none; text-align: left; cursor: pointer; display: grid; grid-template-columns: minmax(0, 1fr) 6em 6em 6em 46px; gap: 18px; align-items: center; padding: 22px 0; }
+  .n { display: block; font-size: clamp(24px, 3vw, 40px); font-weight: 700; line-height: 1.3; }
+  .m { font-size: 14px; color: var(--ai-2); }
+  .m b { font-family: var(--f-display); font-weight: 600; color: var(--ai); font-size: 16px; }
+  .mob { display: none; font-size: 13px; color: var(--ai-2); }
+  .pm { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--ai); position: relative; justify-self: end; transition: background 0.2s; }
+  .pm::before, .pm::after { content: ""; position: absolute; left: 50%; top: 50%; width: 14px; height: 1.5px; background: var(--ai); transform: translate(-50%, -50%); transition: transform 0.3s; }
+  .pm::after { transform: translate(-50%, -50%) rotate(90deg); }
+  .head[aria-expanded="true"] .pm { background: var(--kihada); }
+  .head[aria-expanded="true"] .pm::after { transform: translate(-50%, -50%) rotate(0); }
+  .head:hover .n { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 6px; }
+  .body { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.45s var(--ease); visibility: hidden; }
+  .head[aria-expanded="true"] + .body { grid-template-rows: 1fr; visibility: visible; }
+  .body > div { overflow: hidden; }
+  .inner { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; padding: 0 0 32px; }
+  .inner p { font-size: 16px; max-width: 30em; }
+  .tags { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; font-size: 13px !important; color: var(--ai-2); }
+  @media (max-width: 760px) {
+    .head { grid-template-columns: minmax(0, 1fr) 46px; }
+    .m { display: none; }
+    .mob { display: block; }
+    .inner { grid-template-columns: 1fr; }
+  }
+  .empty { color: var(--ai-2); padding-top: 18px; }
+</style>
+
+<script>
+  import { initApplyForms } from "../../scripts/forms";
+  initApplyForms();
+  document.querySelectorAll<HTMLElement>("[data-community-list]").forEach((list) => {
+    list.addEventListener("click", (e) => {
+      const h = (e.target as Element).closest<HTMLButtonElement>(".head");
+      if (!h) return;
+      const open = h.getAttribute("aria-expanded") !== "true";
+      h.setAttribute("aria-expanded", String(open));
+      if (open) setTimeout(() => (h.nextElementSibling?.querySelector("input") as HTMLInputElement | null)?.focus({ preventScroll: true }), 300);
+    });
+  });
+  document.querySelectorAll<HTMLElement>("[data-community-filters]").forEach((group) => {
+    const list = group.nextElementSibling as HTMLElement;
+    group.addEventListener("click", (e) => {
+      const b = (e.target as Element).closest<HTMLButtonElement>("button[data-type]");
+      if (!b) return;
+      group.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+      list.querySelectorAll<HTMLElement>(".item").forEach((li) => (li.hidden = !!b.dataset.type && li.dataset.type !== b.dataset.type));
+    });
+  });
+</script>

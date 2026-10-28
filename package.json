@@ -1,0 +1,35 @@
+{
+  "name": "gakusei-kichi-site",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "test": "vitest run",
+    "verify": "astro check && vitest run && astro build"
+  },
+  "dependencies": {
+    "@astrojs/rss": "4.0.19",
+    "@astrojs/sitemap": "3.7.4",
+    "@astrojs/vercel": "8.2.11",
+    "@fontsource-variable/anybody": "5.3.0",
+    "@fontsource/zen-old-mincho": "5.3.0",
+    "astro": "5.18.2",
+    "microcms-js-sdk": "3.5.1",
+    "sanitize-html": "2.18.0",
+    "three": "0.160.1"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.10",
+    "@types/sanitize-html": "2.16.0",
+    "@types/three": "0.160.0",
+    "typescript": "5.9.3",
+    "vitest": "3.2.4"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

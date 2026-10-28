@@ -1,0 +1,20 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import SectionHead from "../components/ui/SectionHead.astro";
+import JoinForm from "../components/sections/JoinForm.astro";
+import { getSettings } from "../lib/content";
+const s = await getSettings();
+---
+<BaseLayout title="参加する" description={`${s.name}への参加、コミュニティへの参加、プロジェクトの応援の申し込みはこちらから。`}>
+  <div class="in page-top">
+    <SectionHead nav="cerebellum" level={1}>
+      <p>予報を見て終わりにせず、続けられる行動に変えていくための入口です。メンバーになる、コミュニティに入る、プロジェクトを応援する、のどれからでも始められます。</p>
+    </SectionHead>
+    <JoinForm />
+    <p class="pp">送信する前に <a href="/privacy/">個人情報の扱い</a> をご確認ください。</p>
+  </div>
+</BaseLayout>
+
+<style>
+  .pp { margin-top: 40px; font-size: 13px; color: var(--ai-2); }
+</style>

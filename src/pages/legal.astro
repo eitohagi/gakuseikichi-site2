@@ -1,0 +1,21 @@
+---
+// 特定商取引法に基づく表記。microCMS の settings「特定商取引法に基づく表記」に書いた内容を表示する
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { getSettings } from "../lib/content";
+const s = await getSettings();
+const ready = s.legalHtml.trim().length > 0;
+---
+<BaseLayout title="特定商取引法に基づく表記" noindex={!ready}>
+  <div class="in page-top doc">
+    <h1>特定商取引法に基づく表記</h1>
+    {ready ? <div class="prose" set:html={s.legalHtml} /> : (
+      <p class="todo">準備中です。商品の販売を始める前に、販売者の名称、責任者、所在地、連絡先、販売価格以外の費用（送料など）、支払い方法と時期、引き渡しの時期、返品の扱いを掲載します。</p>
+    )}
+  </div>
+</BaseLayout>
+
+<style>
+  .doc { max-width: 820px; }
+  h1 { font-size: clamp(28px, 4vw, 44px); margin-bottom: 36px; }
+  .todo { color: var(--ai-2); }
+</style>

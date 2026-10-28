@@ -1,0 +1,94 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import SectionHead from "../components/ui/SectionHead.astro";
+import { ROLES, getSettings, getSiteData } from "../lib/content";
+import { NAV } from "../config/site";
+
+const [s, data] = await Promise.all([getSettings(), getSiteData()]);
+---
+<BaseLayout title={`${s.name}について`} description={s.description}>
+  <div class="in page-top">
+    <SectionHead nav="stem" title={`${s.name}について`} level={1}>
+      <p>{s.description}</p>
+    </SectionHead>
+
+    <p class="mission">{s.mission}</p>
+
+    <section class="block" aria-labelledby="h-cycle">
+      <h2 id="h-cycle" class="h">1週間の回し方</h2>
+      <ol class="cycle">
+        {s.cycle.map((c) => <li><h3>{c.title}</h3><p>{c.body}</p></li>)}
+      </ol>
+    </section>
+
+    <section class="block" aria-labelledby="h-team">
+      <h2 id="h-team" class="h">メンバー</h2>
+      <dl class="team">
+        {ROLES.map((r) => {
+          const people = data.members.filter((m) => m.role === r);
+          return people.length > 0 && (
+            <div><dt>{r}</dt><dd>{people.map((m) => <a href={`/members/${m.id}/`}>{m.name}</a>)}</dd></div>
+          );
+        })}
+      </dl>
+    </section>
+
+    <section class="block" aria-labelledby="h-map">
+      <h2 id="h-map" class="h">このサイトの地図</h2>
+      <p class="lead">サイト全体をひとつの脳に見立てています。部位ごとの働きと、載っているものの対応です。</p>
+      <dl class="map">
+        {NAV.filter((n) => n.key !== "stem").map((n) => (
+          <div><dt><span class="lobe">{n.lobe}</span><span class="role">{n.role}</span></dt><dd><a href={n.href}>{n.label}</a></dd></div>
+        ))}
+      </dl>
+    </section>
+
+    <section class="block" aria-labelledby="h-now">
+      <h2 id="h-now" class="h">いまの{s.name}</h2>
+      <dl class="facts">
+        <div><dt>メンバー</dt><dd><span class="num">{data.members.length}</span>人</dd></div>
+        <div><dt>記事</dt><dd><span class="num">{data.articles.length}</span>本</dd></div>
+        <div><dt>コミュニティ</dt><dd><span class="num">{data.communities.length}</span></dd></div>
+        <div><dt>プロダクト</dt><dd><span class="num">{data.products.length}</span></dd></div>
+      </dl>
+      {s.email && <p class="contact">取材やご相談は <span class="mail">{s.email}</span> まで。</p>}
+      <a class="go" href="/join/">参加する</a>
+    </section>
+  </div>
+</BaseLayout>
+
+<style>
+  .mission { font-size: clamp(28px, 4.4vw, 60px); line-height: 1.45; font-weight: 700; max-width: 18em; margin-left: calc(2 / 12 * 100%); }
+  @media (max-width: 900px) { .mission { margin-left: 0; } }
+  .block { margin-top: var(--section); }
+  .h { font-size: clamp(24px, 2.6vw, 34px); margin-bottom: 24px; }
+  .lead { color: var(--ai-2); margin: -10px 0 24px; max-width: 34em; }
+  .cycle { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; counter-reset: c; }
+  .cycle li { border-top: 1px solid var(--ai); padding-top: 18px; counter-increment: c; }
+  .cycle li::before { content: counter(c); font-family: var(--f-display); font-size: 64px; font-weight: 300; line-height: 1; font-variation-settings: "wdth" 60; display: block; margin-bottom: 14px; }
+  .cycle h3 { font-size: 24px; }
+  .cycle p { font-size: 15px; color: var(--ai-2); margin-top: 8px; max-width: 22em; }
+  .team { margin: 0; border-bottom: 1px solid var(--ai); }
+  .team div { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 20px; padding: 16px 0; border-top: 1px solid var(--ai); align-items: baseline; }
+  .team dt { font-size: 15px; color: var(--ai-2); }
+  .team dd { margin: 0; display: flex; flex-wrap: wrap; gap: 6px 22px; }
+  .team a { font-size: clamp(22px, 2.4vw, 30px); font-weight: 700; text-decoration: none; }
+  .team a:hover { text-decoration: underline; text-decoration-color: var(--kihada); text-decoration-thickness: 4px; text-underline-offset: 6px; }
+  @media (max-width: 760px) { .team div { grid-template-columns: 1fr; gap: 4px; } }
+  .map { margin: 0; border-bottom: 1px solid var(--ai); }
+  .map div { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 20px; padding: 16px 0; border-top: 1px solid var(--ai); align-items: baseline; }
+  .map dt { display: flex; gap: 14px; align-items: baseline; }
+  .lobe { font-size: 26px; font-weight: 900; }
+  .role { font-size: 13px; color: var(--ai-2); }
+  .map dd { margin: 0; font-size: 18px; }
+  .map a { text-decoration: none; background-image: linear-gradient(var(--kihada), var(--kihada)); background-size: 0 0.42em; background-repeat: no-repeat; background-position: 0 90%; transition: background-size 0.3s var(--ease); }
+  .map a:hover { background-size: 100% 0.42em; }
+  .facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; margin: 0 0 32px; }
+  .facts div { border-top: 1px solid var(--ai); padding-top: 12px; }
+  .facts dt { font-size: 13px; color: var(--ai-2); }
+  .facts dd { margin: 0; font-size: 16px; }
+  .facts .num { font-size: 56px; font-weight: 300; font-variation-settings: "wdth" 62; line-height: 1.1; margin-right: 4px; }
+  .contact { margin-bottom: 24px; }
+  .mail { user-select: all; font-family: var(--f-display); }
+  @media (max-width: 760px) { .cycle { grid-template-columns: 1fr; } .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } .map div { grid-template-columns: 1fr; gap: 2px; } }
+</style>

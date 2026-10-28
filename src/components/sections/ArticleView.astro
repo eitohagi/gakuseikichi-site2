@@ -1,0 +1,156 @@
+---
+// 記事の本文ページ（公開ページと下書きプレビューで共通）
+// ・時刻で始まる見出しが2つ以上あれば、タイムラインとして表示し、広い画面では左に時刻の目次を出す
+// ・タグに「未来予報」がある記事は、予測した未来を体験したつもりで書いた記事として案内をつける
+import type { Article, Member } from "../../lib/content";
+import Portrait from "../ui/Portrait.astro";
+import ArtTile from "../ui/ArtTile.astro";
+import Forecast from "../ui/Forecast.astro";
+import { fmtDate } from "../../lib/format";
+import { enhanceBody } from "../../lib/content/enhance";
+interface Props { article: Article; author?: Member; authorIndex?: number; related?: Article[] }
+const { article: a, author, authorIndex = 0, related = [] } = Astro.props;
+const forecast = a.forecast ?? author?.forecast ?? null;
+const label = a.forecast ? "この記事を書いた時点の未来予報" : author ? `${author.name}さんの現在の未来予報` : "未来予報";
+const { html, timeline } = enhanceBody(a.body);
+const isFuture = a.tags.includes("未来予報");
+---
+<div class="progress" aria-hidden="true"><i></i></div>
+<div class:list={["wrap", { "with-nav": timeline.length > 0 }]}>
+  {timeline.length > 0 && (
+    <nav class="tl-nav" aria-label="時間の流れ">
+      <p>時間の流れ</p>
+      <ol>{timeline.map((s) => <li><a href={`#${s.id}`}><time>{s.time}</time><span>{s.label}</span></a></li>)}</ol>
+    </nav>
+  )}
+  <article class="art">
+    <nav class="crumb" aria-label="現在地"><a href="/articles/">記事</a></nav>
+    {isFuture && (
+      <p class="future"><b>未来予報</b><span>この記事は、{author ? `${author.name}さん` : "書き手"}が予測した未来を、実際に体験したつもりで書いたものです。</span></p>
+    )}
+    <p class="meta">
+      <time class="num" datetime={a.publishedAt}>{fmtDate(a.publishedAt)}</time>
+      {a.tags.length > 0 && <span>{a.tags.join("、")}</span>}
+    </p>
+    <h1>{a.title}</h1>
+    {author && (
+      <a class="byline" href={`/members/${author.id}/`}>
+        <span class="face"><Portrait member={author} seed={authorIndex} /></span>
+        <span><b>{author.name}</b><small>{author.project || author.role}</small></span>
+      </a>
+    )}
+    <div class="cover"><ArtTile image={a.cover} color={author?.color ?? "藍"} seed={authorIndex + 3} ratio={0.5625} sizes="(max-width: 800px) 100vw, 760px" eager /></div>
+    <div class:list={["prose", "body", { timeline: timeline.length > 0 }]} set:html={html} />
+    {forecast && <div class="fcw"><Forecast forecast={forecast} label={label} /></div>}
+    {related.length > 0 && author && (
+      <nav class="more-l" aria-label={`${author.name}さんのほかの記事`}>
+        <p class="lbl">{author.name}さんのほかの記事</p>
+        {related.map((r) => <a href={`/articles/${r.id}/`}>{r.title}</a>)}
+      </nav>
+    )}
+  </article>
+</div>
+
+<style>
+  .wrap { display: block; }
+  .art { max-width: 720px; margin: 0 auto; }
+  @media (min-width: 1180px) {
+    .with-nav { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 720px) minmax(0, 1fr); gap: 56px; }
+    .with-nav .tl-nav { grid-column: 1; justify-self: end; }
+    .with-nav .art { grid-column: 2; margin: 0; }
+  }
+  .crumb { font-size: 14px; margin-bottom: 28px; }
+  .crumb a { text-decoration: none; color: var(--ai-2); }
+  .crumb a::before { content: "‹ "; }
+  .crumb a:hover { color: var(--ai); }
+  .future { display: flex; gap: 12px; align-items: baseline; margin-bottom: 22px; padding: 12px 16px; background: var(--paper); border-left: 4px solid var(--kihada); font-size: 14px; line-height: 1.7; }
+  .future b { flex: none; font-size: 13px; letter-spacing: 0.08em; }
+  .meta { display: flex; gap: 18px; font-size: 13.5px; color: var(--ai-2); flex-wrap: wrap; }
+  .meta .num { font-variation-settings: "wdth" 80; }
+  h1 { font-size: clamp(30px, 4.4vw, 50px); line-height: 1.45; margin-top: 16px; }
+  .byline { display: inline-flex; gap: 14px; align-items: center; margin-top: 28px; text-decoration: none; }
+  .face { width: 48px; display: block; }
+  .byline b { display: block; font-size: 16px; }
+  .byline small { font-size: 13px; color: var(--ai-2); }
+  .byline:hover b { text-decoration: underline; text-decoration-color: var(--kihada); text-decoration-thickness: 3px; }
+  .cover { margin-top: 36px; }
+  .body { margin-top: 44px; }
+
+  /* 読みやすさ：段落の間を少し広く、行の長さを抑える */
+  .body :global(p) { margin-bottom: 1.35em; }
+
+  /* 写真の差し込み枠（写真がまだのとき） */
+  .body :global(figure.ph) { margin: 28px 0; }
+  .body :global(figure.ph > div) { aspect-ratio: 3 / 2; background: repeating-linear-gradient(135deg, var(--paper) 0 14px, #e1e5dd 14px 15px); border: 1px solid var(--rule); display: grid; place-items: center; }
+  .body :global(figure.ph > div::after) { content: "写真が入ります"; font-size: 13px; color: var(--ai-2); background: var(--paper); padding: 2px 10px; }
+  .body :global(figure.ph figcaption) { font-size: 13px; color: var(--ai-2); margin-top: 8px; }
+
+  /* タイムライン */
+  .timeline :global(.tl-step) { position: relative; padding: 0 0 8px 34px; margin-left: 6px; border-left: 1px solid var(--ai); scroll-margin-top: 90px; }
+  .timeline :global(.tl-step:last-of-type) { padding-bottom: 28px; }
+  .timeline :global(.tl-head) { margin: 0 0 14px; padding-top: 44px; display: grid; gap: 2px; font-size: 22px; line-height: 1.45; }
+  .timeline :global(.tl-step:first-of-type .tl-head) { padding-top: 0; }
+  .timeline :global(.tl-head time) {
+    font-family: var(--f-display); font-weight: 300; font-size: 44px; line-height: 1; letter-spacing: -0.01em;
+    font-variation-settings: "wdth" 62; font-variant-numeric: tabular-nums; position: relative;
+  }
+  .timeline :global(.tl-head time::before) {
+    content: ""; position: absolute; left: -41px; top: 50%; width: 13px; height: 13px; margin-top: -6px; border-radius: 50%;
+    background: var(--kihada); box-shadow: 0 0 0 1.5px var(--ai), 0 0 0 6px var(--washi);
+  }
+  @media (max-width: 600px) {
+    .timeline :global(.tl-step) { padding-left: 22px; margin-left: 4px; }
+    .timeline :global(.tl-head time::before) { left: -29px; }
+    .timeline :global(.tl-head time) { font-size: 38px; }
+  }
+  .timeline > :global(h2:not(.tl-head)) { margin-top: 64px; padding-top: 24px; border-top: 1px solid var(--ai); }
+
+  /* 左の時刻の目次（広い画面のみ） */
+  .tl-nav { display: none; }
+  @media (min-width: 1180px) {
+    .tl-nav { display: block; position: sticky; top: 110px; align-self: start; width: 200px; font-size: 13px; }
+    .tl-nav p { color: var(--ai-2); margin-bottom: 10px; }
+    .tl-nav ol { list-style: none; margin: 0; padding: 0; border-left: 1px solid var(--rule); }
+    .tl-nav a { display: grid; grid-template-columns: 3.4em 1fr; gap: 6px; padding: 5px 0 5px 12px; text-decoration: none; color: var(--ai-2); border-left: 2px solid transparent; margin-left: -1.5px; line-height: 1.5; }
+    .tl-nav time { font-family: var(--f-display); font-variation-settings: "wdth" 80; }
+    .tl-nav a:hover, .tl-nav a:global(.on) { color: var(--ai); }
+    .tl-nav a:global(.on) { border-left-color: var(--kihada); font-weight: 700; }
+  }
+
+  /* 読んだ位置 */
+  .progress { position: fixed; left: 0; right: 0; top: env(safe-area-inset-top, 0px); height: 3px; z-index: 45; pointer-events: none; }
+  .progress i { display: block; height: 100%; background: var(--kihada); transform-origin: 0 50%; transform: scaleX(0); }
+
+  .fcw { margin-top: 56px; }
+  .more-l { margin-top: 56px; border-top: 1px solid var(--ai); padding-top: 18px; }
+  .lbl { font-size: 13px; color: var(--ai-2); }
+  .more-l a { display: block; font-size: 18px; font-weight: 700; padding: 8px 0; text-decoration: none; }
+  .more-l a:hover { text-decoration: underline; text-decoration-color: var(--kihada); text-decoration-thickness: 4px; text-underline-offset: 6px; }
+</style>
+
+<script>
+  // 読んだ位置のバー
+  const bar = document.querySelector<HTMLElement>(".progress i");
+  const art = document.querySelector<HTMLElement>(".art");
+  if (bar && art) {
+    const update = () => {
+      const r = art.getBoundingClientRect();
+      const total = r.height - innerHeight;
+      bar.style.transform = `scaleX(${total > 0 ? Math.min(1, Math.max(0, -r.top / total)) : 1})`;
+    };
+    addEventListener("scroll", update, { passive: true });
+    addEventListener("resize", update);
+    update();
+  }
+  // いま読んでいる時刻を目次で示す
+  const links = [...document.querySelectorAll<HTMLAnchorElement>(".tl-nav a")];
+  if (links.length) {
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        links.forEach((l) => l.classList.toggle("on", l.hash === `#${e.target.id}`));
+      }
+    }, { rootMargin: "-40% 0px -55% 0px" });
+    document.querySelectorAll(".tl-step").forEach((s) => io.observe(s));
+  }
+</script>

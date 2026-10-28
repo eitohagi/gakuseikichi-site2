@@ -1,0 +1,101 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Hero from "../components/sections/Hero.astro";
+import SectionHead from "../components/ui/SectionHead.astro";
+import MemberStrip from "../components/sections/MemberStrip.astro";
+import ArticleIndex from "../components/sections/ArticleIndex.astro";
+import CommunityList from "../components/sections/CommunityList.astro";
+import ProductGrid from "../components/sections/ProductGrid.astro";
+import DemoViewer from "../components/sections/DemoViewer.astro";
+import JoinForm from "../components/sections/JoinForm.astro";
+import { getSettings, getSiteData, memberMap } from "../lib/content";
+
+const [settings, data] = await Promise.all([getSettings(), getSiteData()]);
+const byId = memberMap(data);
+---
+<BaseLayout headerSolidFrom="hero">
+  <Hero settings={settings} members={data.members} />
+
+  <section class="sec" aria-labelledby="h-members">
+    <div class="in">
+      <SectionHead nav="frontal" title={"プロジェクトと\n未来予報"}>
+        <p>メンバーそれぞれが、自分のプロジェクトを通して見える未来を、天気予報のように出します。確率と一緒に、その未来に向けて今日できる行動を添えています。</p>
+        <Fragment slot="aside"><span class="count">メンバー {data.members.length}人</span><br /><a class="more" style="margin-top:6px" href="/members/">メンバー一覧へ</a></Fragment>
+      </SectionHead>
+    </div>
+    <MemberStrip members={data.members} articles={data.articles} />
+  </section>
+
+  <section class="sec">
+    <div class="in">
+      <SectionHead nav="hippo" title="新しい記事">
+        <p>メンバーがプロジェクトの途中経過、失敗、発見を書き残しています。書いた時点の予報も一緒に残るので、予報の移り変わりをさかのぼれます。</p>
+        <span slot="aside" class="count">{data.articles.length}本の記事</span>
+      </SectionHead>
+      <ArticleIndex articles={data.articles.slice(0, 4)} members={byId} />
+      <a class="more" href="/articles/">すべての記事を読む</a>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="in">
+      <SectionHead nav="temporal">
+        <p>学校や国籍の枠を越えて、気になる人に出会える集まりです。名前を押すと、内容と申し込みフォームが開きます。</p>
+      </SectionHead>
+      <CommunityList communities={data.communities.slice(0, 4)} filters={false} />
+      {data.communities.length > 4 && <a class="more" href="/community/">すべてのコミュニティを見る（{data.communities.length}）</a>}
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="in">
+      <SectionHead nav="parietal">
+        <p>メンバーのプロジェクトから生まれたモノを買えます。「購入する」を押すと、決済ページが新しいタブで開きます。</p>
+      </SectionHead>
+      <ProductGrid products={data.products.slice(0, 3)} members={byId} />
+      <a class="more" href="/products/">すべてのプロダクトを見る</a>
+    </div>
+  </section>
+
+  <div class="band">
+    <section class="sec">
+      <div class="in">
+        <SectionHead nav="occipital" tone="dark">
+          <p>試作品を3Dで回して確かめられます。ドラッグで回転、ホイールかピンチで拡大します。</p>
+        </SectionHead>
+        <DemoViewer demos={data.demos} members={byId} />
+      </div>
+    </section>
+  </div>
+
+  <section class="sec">
+    <div class="in">
+      <SectionHead nav="stem">
+        <p>{settings.mission}</p>
+      </SectionHead>
+      <ol class="cycle">
+        {settings.cycle.map((c) => <li><h3>{c.title}</h3><p>{c.body}</p></li>)}
+      </ol>
+      <a class="more" href="/about/">{settings.name}について詳しく</a>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="in">
+      <SectionHead nav="cerebellum">
+        <p>予報を見て終わりにせず、続けられる行動に変えていくための入口です。</p>
+      </SectionHead>
+      <JoinForm />
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .cycle { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; counter-reset: c; }
+  .cycle li { border-top: 1px solid var(--ai); padding-top: 18px; counter-increment: c; position: relative; }
+  .cycle li::before { content: counter(c); font-family: var(--f-display); font-size: 64px; font-weight: 300; line-height: 1; font-variation-settings: "wdth" 60; display: block; margin-bottom: 14px; }
+  .cycle li:not(:last-child)::after { content: ""; position: absolute; right: -24px; top: 44px; width: 16px; height: 1px; background: var(--ai); }
+  .cycle h3 { font-size: 24px; }
+  .cycle p { font-size: 15px; color: var(--ai-2); margin-top: 8px; max-width: 22em; }
+  @media (max-width: 760px) { .cycle { grid-template-columns: 1fr; } .cycle li::after { display: none; } }
+</style>

@@ -1,0 +1,39 @@
+---
+// メンバーの横スクロール（トップページ用）。カードは MemberPlate
+import type { Article, Member } from "../../lib/content";
+import MemberPlate from "../ui/MemberPlate.astro";
+interface Props { members: Member[]; articles: Article[] }
+const { members, articles } = Astro.props;
+---
+<div class="strip-ctl">
+  <button class="round" type="button" data-strip="-1" aria-label="前のメンバー"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M10 3 5 8l5 5"></path></svg></button>
+  <button class="round" type="button" data-strip="1" aria-label="次のメンバー"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m6 3 5 5-5 5"></path></svg></button>
+</div>
+<div class="strip" id="strip" tabindex="0" role="region" aria-label="メンバー一覧（横にスクロールできます）">
+  {members.map((m, i) => (
+    <div class="slot"><MemberPlate member={m} seed={i} articleCount={articles.filter((a) => a.authorId === m.id).length} /></div>
+  ))}
+</div>
+
+<style>
+  .strip { display: flex; gap: clamp(20px, 3vw, 48px); overflow-x: auto; scroll-snap-type: x mandatory; padding: 4px var(--gutR) 28px var(--gut); scrollbar-width: thin; scrollbar-color: var(--ai) transparent; scroll-padding-left: var(--gut); }
+  .slot { flex: 0 0 clamp(270px, 25vw, 350px); scroll-snap-align: start; }
+  .strip-ctl { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+  .round { width: 46px; height: 46px; border-radius: 50%; border: 1px solid var(--ai); background: transparent; cursor: pointer; display: grid; place-items: center; }
+  .round:hover { background: var(--ai); color: var(--on-ai); }
+  .round svg { width: 16px; height: 16px; }
+</style>
+
+<script>
+  const strip = document.getElementById("strip");
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (strip) {
+    const step = () => {
+      const s = strip.querySelector(".slot");
+      return s ? s.getBoundingClientRect().width + (parseFloat(getComputedStyle(strip).columnGap) || 0) : 300;
+    };
+    document.querySelectorAll<HTMLButtonElement>("[data-strip]").forEach((b) =>
+      b.addEventListener("click", () => strip.scrollBy({ left: Number(b.dataset.strip) * step(), behavior: reduce ? "auto" : "smooth" })),
+    );
+  }
+</script>

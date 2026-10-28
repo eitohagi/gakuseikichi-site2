@@ -1,0 +1,17 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import SectionHead from "../components/ui/SectionHead.astro";
+import CommunityList from "../components/sections/CommunityList.astro";
+import { getSiteData } from "../lib/content";
+
+const data = await getSiteData();
+---
+<BaseLayout title="コミュニティ" description="学校や国籍の枠を越えて、気になる人に出会える集まりの紹介です。">
+  <div class="in page-top">
+    <SectionHead nav="temporal" level={1}>
+      <p>学校や国籍の枠を越えて、気になる人に出会える集まりです。名前を押すと、内容と申し込みフォームが開きます。</p>
+      <span slot="aside" class="count">{data.communities.length}のコミュニティ</span>
+    </SectionHead>
+    <CommunityList communities={data.communities} />
+  </div>
+</BaseLayout>
